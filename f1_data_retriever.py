@@ -103,11 +103,116 @@ def add_new_drivers(dim_table, new_data):
         logging.error(f"An error occurred: {str(e)}")
         raise
 
-#Q_laps, Q_results, Q_drivers = ff1_retriever(schedule, 'Q')
+def add_new_constructors(dim_table, new_data):
+    """
+    Appends new entries to a dimension table while updating the 'driverId' column to maintain a sequential order.
+    
+    Args:
+    dim_table (pd.DataFrame): The dimension table containing existing data.
+    new_data (pd.DataFrame): New data to be appended.
+    
+    Returns:
+    pd.DataFrame: Updated dimension table with new entries appended.
+    """
+    try:
+        # Check for required columns in new data
+        if 'TeamId' not in new_data.columns:
+            logging.error("Missing 'TeamId' in new data.")
+            raise ValueError("New data must include 'TeamId' column.")
+        
+        # Identify new entries not present in the dimension table
+        existing_ids = dim_table['constructorRef'].unique()
+        new_entries = new_data[~new_data['TeamId'].isin(existing_ids)]
+        
+        if new_entries.empty:
+            logging.info("No new entries to append.")
+            return dim_table
+        
+        # Prepare new entries to match dimension table structure
+        new_entries = new_entries.rename(columns={'TeamId': 'constructorRef',
+                                                  'TeamName': 'name'})
+        
+        # Remove additional columns not needed in the dimension table
+        new_entries = new_entries[['constructorRef', 'name']]
+
+        if new_entries.isnull().any().any():
+            logging.warning("NA values found in the new entries. Proceeding with available data.")
+        
+        # Create a new driverId
+        new_entries.insert(0, 'constructorId', range(dim_table['constructorId'].max() + 1, dim_table['constructorId'].max() + 1 + len(new_entries)))
+        
+        # Append and reset index for good measure
+        updated_table = pd.concat([dim_table, new_entries]).reset_index(drop=True)
+        
+        logging.info("New entries appended successfully.")
+        return updated_table
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
+        raise
+
+def add_new_races(dim_table, new_data):
+    """
+    Appends new entries to a dimension table while updating the 'driverId' column to maintain a sequential order.
+    
+    Args:
+    dim_table (pd.DataFrame): The dimension table containing existing data.
+    new_data (pd.DataFrame): New data to be appended.
+    
+    Returns:
+    pd.DataFrame: Updated dimension table with new entries appended.
+    """
+    try:
+        # Check for required columns in new data
+        if 'RoundNumber' not in new_data.columns:
+            logging.error("Missing 'TeamId' in new data.")
+            raise ValueError("New data must include 'TeamId' column.")
+        
+        # Identify new entries not present in the dimension table
+        existing_ids = dim_table['year'].unique()
+
+        new_data['year'] = new_data['EventDate'].dt.year
+
+        new_entries = new_data[~new_data['year'].isin(existing_ids)]
+        
+        if new_entries.empty:
+            logging.info("No new entries to append.")
+            return dim_table
+        
+        # Prepare new entries to match dimension table structure
+        new_entries = new_entries.rename(columns={'RoundNumber': 'round',
+                                              'EventName': 'name',
+                                              'EventDate': 'date'})
+        
+        # Remove additional columns not needed in the dimension table
+        new_entries = new_entries[['year', 'round', 'name', 'date']]
+
+        if new_entries.isnull().any().any():
+            logging.warning("NA values found in the new entries. Proceeding with available data.")
+        
+        # Create a new driverId
+        new_entries.insert(0, 'raceId', range(dim_table['raceId'].max() + 1, dim_table['raceId'].max() + 1 + len(new_entries)))
+        
+        # Append and reset index for good measure
+        updated_table = pd.concat([dim_table, new_entries]).reset_index(drop=True)
+        
+        logging.info("New entries appended successfully.")
+        return updated_table
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
+        raise
+
 R_laps, R_results = ff1_retriever(schedule, 'R')
 Q_laps, Q_results = ff1_retriever(schedule, 'Q')
+S_laps, S_results = ff1_retriever(schedule, 'S')
 
 dim_driver = pd.read_csv(os.path.join(staging_path, 'drivers.csv'), on_bad_lines='skip', header= 0, delimiter= ',')
-updated_dim_table = add_new_drivers(dim_driver, R_results)
+updated_dim_driver = add_new_drivers(dim_driver, R_results)
 
 dim_constructors = pd.read_csv(os.path.join(staging_path, 'constructors.csv'), on_bad_lines='skip', header= 0, delimiter= ',')
+updated_dim_constructor = add_new_constructors(dim_constructors, R_results)
+
+print(schedule.columns)
+
+dim_races = pd.read_csv(os.path.join(staging_path, 'races.csv'), on_bad_lines='skip', header= 0, delimiter= ',')
+updated_dim_races = add_new_races(dim_races, schedule)
+print(updated_dim_races)
