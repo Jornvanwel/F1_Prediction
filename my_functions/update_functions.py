@@ -256,12 +256,14 @@ class Dim_Updater:
             pd.DataFrame: The updated races dimension table.
         """
         new_data['year'] = new_data['EventDate'].dt.year
+        new_data['date'] = new_data['EventDate'].dt.date
+        
         return self.add_new_entries(new_data,                                     
                                     match_column=['year', 'round'],
                                     id_column='raceId', 
                                     entity_name='races',
-                                    rename_dict={'RoundNumber': 'round', 'EventName': 'race_name', 'EventDate': 'date'},
-                                    required_columns=['RoundNumber', 'EventName', 'EventDate', 'year'],
+                                    rename_dict={'RoundNumber': 'round', 'EventName': 'name', 'Circuit_ShortName': 'CircuitId'},
+                                    required_columns=['RoundNumber', 'EventName', 'EventDate', 'year', 'Circuit_ShortName'],
                                     filename='races')
 
 def update_laps(laps):
@@ -413,6 +415,7 @@ def update_standings(results, sprint_results, races):
     driverpoint_df['positionText'] = driverpoint_df['position']
 
     constructorpoints_df = driverpoint_df[['raceId', 'constructorId', 'points', 'wins']].groupby(['raceId', 'constructorId'], as_index=False).sum()
+
     constructorpoints_df['position'] = constructorpoints_df.groupby('raceId')['points'].rank(method='dense', ascending=False).astype(int)
     constructorpoints_df['positionText'] = constructorpoints_df[['position']]
 

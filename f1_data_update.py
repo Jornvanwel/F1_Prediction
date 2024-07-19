@@ -1,8 +1,12 @@
 import fastf1 as ff1
 import logging
-import my_functions.update_functions import ff1_retriever, Dim_Updater, load_dimension_tables, add_new_entries, update_qualifying, update_standings, update_laps, update_results
+from my_functions.update_functions import ff1_retriever, Dim_Updater, load_dimension_tables, add_new_entries, update_qualifying, update_standings, update_laps, update_results
 import os
 import pandas as pd
+
+current_dir = os.getcwd()
+cache_path = os.path.normpath(os.path.join(current_dir, '..', 'Data', 'cache'))
+ff1.Cache.enable_cache(cache_path)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.getLogger('fastf1').setLevel(logging.WARNING)
